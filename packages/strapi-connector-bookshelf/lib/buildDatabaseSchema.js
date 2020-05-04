@@ -1,5 +1,6 @@
 const _ = require('lodash');
 const { singular } = require('pluralize');
+const { getDefinitionIndexFields } = require('./utils/indexes');
 
 module.exports = async ({ ORM, loadedModel, definition, connection, model }) => {
   const createIdType = (table, definition) => {
@@ -114,20 +115,18 @@ module.exports = async ({ ORM, loadedModel, definition, connection, model }) => 
     const generateIndexes = async table => {
       try {
         const connection = strapi.config.connections[definition.connection];
-        let columns = Object.keys(attributes).filter(attribute =>
-          ['string', 'text'].includes(attributes[attribute].type)
-        );
+
+        let columns = getDefinitionIndexFields(attributes, definition.indexes);
 
         if (!columns.length) {
           // No text columns founds, exit from creating Fulltext Index
           return;
         }
-
         switch (connection.settings.client) {
           case 'mysql':
             columns = columns.map(attribute => `\`${attribute}\``).join(',');
-
             // Create fulltext indexes for every column.
+
             await ORM.knex.raw(
               `CREATE FULLTEXT INDEX SEARCH_${_.toUpper(
                 _.snakeCase(table)
@@ -305,6 +304,7 @@ module.exports = async ({ ORM, loadedModel, definition, connection, model }) => 
         const allAttrs = ['id', ...attrs];
 
         await trx.insert(qb => qb.select(allAttrs).from(tmpTable)).into(table);
+
         await trx.schema.dropTableIfExists(tmpTable);
       };
 
@@ -422,7 +422,7 @@ module.exports = async ({ ORM, loadedModel, definition, connection, model }) => 
     }
   }
 
-  // Equilize many to many relations
+  // Equilize many to many releations
   const manyRelations = definition.associations.filter(({ nature }) =>
     ['manyToMany', 'manyWay'].includes(nature)
   );

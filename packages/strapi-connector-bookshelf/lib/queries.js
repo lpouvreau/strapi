@@ -5,6 +5,7 @@
 
 const _ = require('lodash');
 const { convertRestQueryParams, buildQuery, models: modelUtils } = require('strapi-utils');
+const { getDefinitionIndexFields } = require('./utils/indexes');
 
 module.exports = function createQueryBuilder({ model, modelKey, strapi }) {
   /* Utils */
@@ -651,9 +652,11 @@ const buildSearchQuery = (qb, model, params) => {
 
   const associations = model.associations.map(x => x.alias);
 
-  const searchText = Object.keys(model._attributes)
-    .filter(attribute => attribute !== model.primaryKey && !associations.includes(attribute))
-    .filter(attribute => ['string', 'text'].includes(model._attributes[attribute].type));
+
+  let searchAttributes = Object.keys(model._attributes)
+    .filter(attribute => attribute !== model.primaryKey && !associations.includes(attribute));
+
+  const searchText = getDefinitionIndexFields(searchAttributes, model.indexes);
 
   const searchInt = Object.keys(model._attributes)
     .filter(attribute => attribute !== model.primaryKey && !associations.includes(attribute))
